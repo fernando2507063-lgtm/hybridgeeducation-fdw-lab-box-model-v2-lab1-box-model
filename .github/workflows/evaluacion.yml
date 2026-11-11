@@ -1,0 +1,49 @@
+
+name: Evaluacion Box Model
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  evaluar:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Verificar HTML y CSS
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          html = Path("index.html").read_text()
+          css = Path("estilos.css").read_text()
+
+          assert re.search(r'<link\b[^>]*rel=["\']stylesheet["\'][^>]*href=["\']estilos\.css["\']', html)
+          assert re.search(r'<div\b[^>]*class=["\']mi-div["\']', html)
+
+          rule = re.search(r'\.mi-div\s*\{([^}]*)\}', css, re.S)
+          assert rule, "Falta la clase .mi-div"
+
+          declarations = dict(
+              (key.strip(), value.strip())
+              for key, value in re.findall(r'([\w-]+)\s*:\s*([^;]+);', rule.group(1))
+          )
+
+          expected = {
+              "width": "300px",
+              "height": "200px",
+              "padding": "20px",
+              "margin": "30px",
+              "border": "10px solid blue"
+          }
+
+          for key, value in expected.items():
+              assert declarations.get(key) == value, f"Error en {key}"
+
+          print("Todas las verificaciones del Box Model pasaron.")
+          PY
